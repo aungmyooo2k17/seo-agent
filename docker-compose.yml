@@ -9,9 +9,10 @@ services:
 
     environment:
       # =======================================================================
-      # AI Configuration
+      # AI Configuration (ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN)
       # =======================================================================
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - CLAUDE_CODE_OAUTH_TOKEN=${CLAUDE_CODE_OAUTH_TOKEN}
       - AI_MODEL=${AI_MODEL:-claude-sonnet-4-20250514}
       - AI_MAX_TOKENS=${AI_MAX_TOKENS:-8192}
 

@@ -1,5 +1,26 @@
 # AI Development Team Structure
 
+## For Users: How to Report Bugs / Request Features
+
+**Just edit `.ai-team/FEEDBACK.md` and write whatever you want.**
+
+Examples:
+- "the scanner crashes on my monorepo"
+- "can you add support for SvelteKit?"
+- "blog generation is too slow"
+- "I hate how the config works"
+
+That's it. The Product Manager agent will:
+1. Read your feedback
+2. Classify it (bug/feature/improvement)
+3. Prioritize it
+4. Write proper requirements
+5. Assign it to the right engineer
+
+You don't need templates. Just describe what's wrong or what you want.
+
+---
+
 ## Overview
 
 This project is built by a team of AI agents, each with specific expertise and responsibilities. Agents work concurrently on their domains while coordinating through shared context files.
@@ -13,11 +34,14 @@ This project is built by a team of AI agents, each with specific expertise and r
 │                        AI DEVELOPMENT TEAM                          │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                      │
-│   ┌──────────────┐                                                  │
-│   │   ARCHITECT  │  ← Oversees everything, resolves conflicts       │
-│   │    (Lead)    │                                                  │
-│   └──────┬───────┘                                                  │
-│          │                                                          │
+│  ┌──────────────┐     ┌──────────────┐                              │
+│  │   PRODUCT    │ ←→  │   ARCHITECT  │  ← Oversees tech, resolves   │
+│  │   MANAGER    │     │    (Lead)    │    conflicts                 │
+│  └──────┬───────┘     └──────┬───────┘                              │
+│         │                    │                                       │
+│         │  Backlog/Reqs      │  Technical Direction                 │
+│         └────────────────────┤                                       │
+│                              │                                       │
 │   ┌──────┴──────────────────────────────────────────────┐          │
 │   │                                                      │          │
 │   ▼                    ▼                    ▼            ▼          │
@@ -49,6 +73,26 @@ This project is built by a team of AI agents, each with specific expertise and r
 ---
 
 ## Agent Definitions
+
+### 0. PRODUCT MANAGER
+
+**Role:** Feature requests, bug tracking, roadmap, requirements
+
+**Responsibilities:**
+- Triage and prioritize feature requests
+- Categorize and track bugs
+- Maintain product backlog
+- Write clear requirements for engineering
+- Roadmap planning
+
+**Owns:**
+- `BACKLOG.md`
+- `ROADMAP.md` (if created)
+- `/rfcs/` (feature specifications)
+
+**Context File:** `.ai-team/agents/product-manager.md`
+
+---
 
 ### 1. ARCHITECT (Tech Lead)
 
@@ -286,6 +330,9 @@ This project is built by a team of AI agents, each with specific expertise and r
 
 | Directory/File | Owner | Can Modify | Read Only |
 |----------------|-------|------------|-----------|
+| `FEEDBACK.md` | User | User | Product Manager |
+| `BACKLOG.md` | Product Manager | Product Manager | All |
+| `ROADMAP.md` | Product Manager | Product Manager, Architect | All |
 | `/src/index.ts` | Architect | Architect | All |
 | `/src/types/` | Architect | Architect, All (additions) | - |
 | `/src/config/` | Backend | Backend | All |
@@ -356,6 +403,9 @@ Create all files in /src/db/.
 ---
 
 ## Agent Invocation Order
+
+### Batch 0 (Pre-Development)
+0. Product Manager — Backlog, priorities, requirements
 
 ### Batch 1 (Concurrent)
 1. Backend Engineer — DB, Config

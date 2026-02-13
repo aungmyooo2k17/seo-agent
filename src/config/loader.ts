@@ -3,6 +3,8 @@
  */
 
 import { config as dotenvConfig } from 'dotenv';
+import * as fs from 'fs';
+import * as path from 'path';
 import type { Config, RepoConfig, RepoSettings, AIConfig, ImageConfig, EmailConfig } from '../types';
 
 /**
@@ -19,29 +21,22 @@ export class ConfigError extends Error {
 }
 
 /**
- * Required environment variables by category
- */
-const REQUIRED_VARS = {
-  ai: ['AI_API_KEY', 'AI_MODEL'],
-  email: ['EMAIL_FROM', 'EMAIL_TO'],
-} as const;
-
-/**
  * Optional environment variables with defaults
  */
 const DEFAULTS = {
-  AI_MAX_TOKENS: '4096',
+  AI_MODEL: 'claude-sonnet-4-20250514',
+  AI_MAX_TOKENS: '8192',
   AI_TEMPERATURE: '0.7',
   IMAGE_PROVIDER: 'replicate',
-  IMAGE_MODEL: 'stability-ai/sdxl',
-  IMAGE_MAX_PER_DAY: '10',
+  IMAGE_MODEL: 'flux-schnell',
+  IMAGE_MAX_PER_DAY: '5',
   EMAIL_PROVIDER: 'resend',
   EMAIL_DAILY_REPORT: 'true',
   EMAIL_WEEKLY_REPORT: 'true',
 } as const;
 
 /**
- * Get an environment variable with a required default
+ * Get an environment variable with a default
  */
 function getEnvWithDefault(key: string, defaultValue: string): string {
   return process.env[key] ?? defaultValue;
@@ -52,17 +47,6 @@ function getEnvWithDefault(key: string, defaultValue: string): string {
  */
 function getEnvOptional(key: string): string | undefined {
   return process.env[key];
-}
-
-/**
- * Get a required environment variable, throwing if missing
- */
-function requireEnv(key: string): string {
-  const value = process.env[key];
-  if (!value) {
-    throw new ConfigError(`Missing required environment variable: ${key}`, [key]);
-  }
-  return value;
 }
 
 /**
@@ -84,10 +68,27 @@ function parseBoolean(value: string): boolean {
 }
 
 /**
- * Parse repository configurations from environment
+ * Load repository configurations from JSON file
+ */
+function loadReposFromFile(): RepoConfig[] {
+  const configPath = process.env['CONFIG_PATH'] || 'config/repos.json';
+
+  try {
+    const fullPath = path.resolve(configPath);
+    const content = fs.readFileSync(fullPath, 'utf-8');
+    const data = JSON.parse(content) as { repos: RepoConfig[] };
+    return data.repos || [];
+  } catch (error) {
+    console.warn(`Warning: Could not load repos from ${configPath}:`, error);
+    return [];
+  }
+}
+
+/**
+ * Parse repository configurations from environment (fallback)
  * Format: REPO_<ID>_URL, REPO_<ID>_BRANCH, etc.
  */
-function parseRepoConfigs(): RepoConfig[] {
+function parseRepoConfigsFromEnv(): RepoConfig[] {
   const repos: RepoConfig[] = [];
   const repoIds = new Set<string>();
 
@@ -116,7 +117,6 @@ function parseRepoConfigs(): RepoConfig[] {
       excludePaths: getEnvWithDefault(`${prefix}_EXCLUDE`, '').split(',').map(p => p.trim()).filter(Boolean),
     };
 
-    // Only add customInstructions if it's defined (exactOptionalPropertyTypes compliance)
     if (customInstructions !== undefined) {
       settings.customInstructions = customInstructions;
     }
@@ -145,7 +145,7 @@ function parseRepoConfigs(): RepoConfig[] {
  */
 function parseAIConfig(): AIConfig {
   return {
-    model: requireEnv('AI_MODEL'),
+    model: getEnvWithDefault('AI_MODEL', DEFAULTS.AI_MODEL),
     maxTokens: parseNumber(getEnvWithDefault('AI_MAX_TOKENS', DEFAULTS.AI_MAX_TOKENS), 'AI_MAX_TOKENS'),
     temperature: parseNumber(getEnvWithDefault('AI_TEMPERATURE', DEFAULTS.AI_TEMPERATURE), 'AI_TEMPERATURE'),
   };
@@ -164,12 +164,12 @@ function parseImageConfig(): ImageConfig {
   return {
     provider,
     model: getEnvWithDefault('IMAGE_MODEL', DEFAULTS.IMAGE_MODEL),
-    maxPerDay: parseNumber(getEnvWithDefault('IMAGE_MAX_PER_DAY', DEFAULTS.IMAGE_MAX_PER_DAY), 'IMAGE_MAX_PER_DAY'),
+    maxPerDay: parseNumber(getEnvWithDefault('MAX_IMAGES_PER_DAY', DEFAULTS.IMAGE_MAX_PER_DAY), 'MAX_IMAGES_PER_DAY'),
   };
 }
 
 /**
- * Parse email configuration from environment
+ * Parse email configuration from environment (all optional)
  */
 function parseEmailConfig(): EmailConfig {
   const provider = getEnvWithDefault('EMAIL_PROVIDER', DEFAULTS.EMAIL_PROVIDER);
@@ -178,39 +178,43 @@ function parseEmailConfig(): EmailConfig {
     throw new ConfigError(`Invalid EMAIL_PROVIDER: ${provider}. Must be 'resend' or 'smtp'`);
   }
 
+  const to = getEnvOptional('REPORT_EMAIL');
+
   return {
     provider,
-    from: requireEnv('EMAIL_FROM'),
-    to: requireEnv('EMAIL_TO').split(',').map(e => e.trim()).filter(Boolean),
+    from: getEnvWithDefault('EMAIL_FROM', 'SEO Agent <seo@example.com>'),
+    to: to ? to.split(',').map(e => e.trim()).filter(Boolean) : [],
     dailyReport: parseBoolean(getEnvWithDefault('EMAIL_DAILY_REPORT', DEFAULTS.EMAIL_DAILY_REPORT)),
     weeklyReport: parseBoolean(getEnvWithDefault('EMAIL_WEEKLY_REPORT', DEFAULTS.EMAIL_WEEKLY_REPORT)),
   };
 }
 
 /**
- * Validate all required environment variables are present
+ * Validate that we have at least one AI credential
  */
-function validateRequiredVars(): void {
-  const missing: string[] = [];
+function validateAICredentials(): void {
+  const apiKey = process.env['ANTHROPIC_API_KEY'];
+  const oauthToken = process.env['CLAUDE_CODE_OAUTH_TOKEN'];
 
-  for (const category of Object.keys(REQUIRED_VARS) as (keyof typeof REQUIRED_VARS)[]) {
-    for (const varName of REQUIRED_VARS[category]) {
-      if (!process.env[varName]) {
-        missing.push(varName);
-      }
-    }
-  }
-
-  if (missing.length > 0) {
+  if (!apiKey && !oauthToken) {
     throw new ConfigError(
-      `Missing required environment variables: ${missing.join(', ')}`,
-      missing
+      'Missing AI credentials. Set either ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN',
+      ['ANTHROPIC_API_KEY', 'CLAUDE_CODE_OAUTH_TOKEN']
     );
   }
 }
 
 /**
- * Load configuration from environment variables
+ * Validate GitHub token is present
+ */
+function validateGitHubToken(): void {
+  if (!process.env['GITHUB_TOKEN']) {
+    throw new ConfigError('Missing GITHUB_TOKEN environment variable', ['GITHUB_TOKEN']);
+  }
+}
+
+/**
+ * Load configuration from environment variables and config files
  * @param envPath - Optional path to .env file
  * @returns Validated configuration object
  * @throws ConfigError if required variables are missing or invalid
@@ -223,12 +227,23 @@ export function loadConfig(envPath?: string): Config {
     dotenvConfig();
   }
 
-  // Validate required variables
-  validateRequiredVars();
+  // Validate required credentials
+  validateAICredentials();
+  validateGitHubToken();
+
+  // Load repos - try file first, then env vars
+  let repos = loadReposFromFile();
+  if (repos.length === 0) {
+    repos = parseRepoConfigsFromEnv();
+  }
+
+  if (repos.length === 0) {
+    console.warn('Warning: No repositories configured. Create config/repos.json or set REPO_* env vars.');
+  }
 
   // Parse and return configuration
   return {
-    repos: parseRepoConfigs(),
+    repos,
     ai: parseAIConfig(),
     images: parseImageConfig(),
     email: parseEmailConfig(),
@@ -242,12 +257,16 @@ export function loadConfig(envPath?: string): Config {
 export function validateConfig(): { valid: boolean; errors: string[] } {
   const errors: string[] = [];
 
-  try {
-    validateRequiredVars();
-  } catch (e) {
-    if (e instanceof ConfigError) {
-      errors.push(e.message);
-    }
+  // Check AI credentials
+  const apiKey = process.env['ANTHROPIC_API_KEY'];
+  const oauthToken = process.env['CLAUDE_CODE_OAUTH_TOKEN'];
+  if (!apiKey && !oauthToken) {
+    errors.push('Missing AI credentials (ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN)');
+  }
+
+  // Check GitHub token
+  if (!process.env['GITHUB_TOKEN']) {
+    errors.push('Missing GITHUB_TOKEN');
   }
 
   // Check AI_TEMPERATURE is in valid range

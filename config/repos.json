@@ -1,21 +1,26 @@
 {
   "repos": [
     {
-      "id": "example-site",
-      "url": "git@github.com:yourusername/your-website.git",
+      "id": "achilles-wellness-site",
+      "url": "https://github.com/aungmyooo2k17/achilles-wellness-site.git",
       "branch": "main",
-      "domain": "https://example.com",
+      "domain": "https://www.praktijkachilles.nl",
       "settings": {
-        "contentFrequency": "weekly",
+        "contentFrequency": "daily",
         "tone": "professional",
-        "topics": ["your-industry", "your-product", "tutorials"],
-        "maxBlogsPerWeek": 2,
-        "maxImagesPerDay": 3,
-        "excludePaths": ["node_modules/", ".git/", "dist/"],
-        "customInstructions": "Focus on B2B audience. Avoid overly casual language."
+        "topics": [
+          "healthcare-industry",
+          "physiotherapy-services",
+          "clinical best-practices",
+          "B2B partnerships"
+        ],
+        "maxBlogsPerWeek": 1,
+        "maxImagesPerDay": 2,
+        "excludePaths": ["node_modules/", ".git/", "dist/", "private-docs/"],
+        "customInstructions": "Target healthcare professionals and business partners. Focus on clinical value, industry insights, and collaborative opportunities. Avoid casual language."
       },
       "searchConsole": {
-        "propertyUrl": "https://example.com"
+        "propertyUrl": "https://www.praktijkachilles.nl"
       }
     }
   ]

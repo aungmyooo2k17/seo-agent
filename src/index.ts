@@ -85,6 +85,9 @@ interface Services {
 async function processRepository(repo: RepoConfig, services: Services): Promise<void> {
   const { db, ai, github, searchConsole, contentGenerator, changeTracker } = services;
 
+  // Step 0: Ensure repo exists in database (for foreign key constraints)
+  await db.saveRepo(repo);
+
   // Step 1: Clone or pull repository
   console.log(`  [sync] Syncing repository...`);
   const repoPath = await github.cloneOrPull(repo);

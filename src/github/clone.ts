@@ -8,6 +8,32 @@ import * as path from 'path';
 import type { RepoConfig } from '../types';
 
 /**
+ * Get authenticated URL by injecting GitHub token into HTTPS URLs
+ * Converts: https://github.com/user/repo.git
+ * To: https://<token>@github.com/user/repo.git
+ */
+function getAuthenticatedUrl(url: string): string {
+  const token = process.env['GITHUB_TOKEN'];
+
+  if (!token) {
+    return url;
+  }
+
+  // Only modify HTTPS URLs
+  if (url.startsWith('https://github.com/')) {
+    return url.replace('https://github.com/', `https://${token}@github.com/`);
+  }
+
+  if (url.startsWith('https://')) {
+    // Generic HTTPS URL - try to inject token
+    return url.replace('https://', `https://${token}@`);
+  }
+
+  // SSH URLs - return as-is (requires SSH key)
+  return url;
+}
+
+/**
  * Clones a repository to the specified path
  * Uses shallow clone with single branch for efficiency
  *
@@ -18,8 +44,10 @@ export async function cloneRepository(repo: RepoConfig, repoPath: string): Promi
   const parentDir = path.dirname(repoPath);
   fs.mkdirSync(parentDir, { recursive: true });
 
+  const authUrl = getAuthenticatedUrl(repo.url);
   const git = simpleGit();
-  await git.clone(repo.url, repoPath, [
+
+  await git.clone(authUrl, repoPath, [
     '--branch',
     repo.branch,
     '--single-branch',

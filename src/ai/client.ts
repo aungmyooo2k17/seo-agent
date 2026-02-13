@@ -1,6 +1,6 @@
 /**
  * AI Client for SEO automation using the Anthropic Claude API.
- * Handles all AI-powered analysis, content generation, and code fixes.
+ * Supports both ANTHROPIC_API_KEY and CLAUDE_CODE_OAUTH_TOKEN authentication.
  */
 
 import {
@@ -20,6 +20,8 @@ import { PROMPTS } from './prompts'
 const API_URL = 'https://api.anthropic.com/v1/messages'
 const MAX_RETRIES = 3
 const INITIAL_RETRY_DELAY_MS = 1000
+
+type AuthType = 'api_key' | 'oauth_token'
 
 interface AnthropicContentBlock {
   type: string
@@ -56,29 +58,98 @@ export interface AIClientConfig {
   maxTokens?: number
   /** API key override (defaults to ANTHROPIC_API_KEY env var) */
   apiKey?: string
+  /** OAuth token override (defaults to CLAUDE_CODE_OAUTH_TOKEN env var) */
+  oauthToken?: string
+}
+
+/**
+ * Resolve credentials from environment or config.
+ * Priority: 1) Config overrides, 2) ANTHROPIC_API_KEY, 3) CLAUDE_CODE_OAUTH_TOKEN
+ */
+function resolveCredentials(config?: AIClientConfig): { token: string; authType: AuthType } {
+  // Check config overrides first
+  if (config?.apiKey) {
+    return { token: config.apiKey, authType: 'api_key' }
+  }
+  if (config?.oauthToken) {
+    return { token: config.oauthToken, authType: 'oauth_token' }
+  }
+
+  // Check environment variables
+  const apiKey = process.env['ANTHROPIC_API_KEY']
+  if (apiKey) {
+    return { token: apiKey, authType: 'api_key' }
+  }
+
+  const oauthToken = process.env['CLAUDE_CODE_OAUTH_TOKEN']
+  if (oauthToken) {
+    return { token: oauthToken, authType: 'oauth_token' }
+  }
+
+  throw new Error(
+    'No API credentials found. Set either ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN environment variable.'
+  )
+}
+
+/**
+ * Build headers for Anthropic API request based on auth type.
+ */
+function buildHeaders(token: string, authType: AuthType): Record<string, string> {
+  const baseHeaders: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'anthropic-version': '2023-06-01',
+  }
+
+  if (authType === 'api_key') {
+    // Standard API key authentication
+    return {
+      ...baseHeaders,
+      'x-api-key': token,
+    }
+  }
+
+  // OAuth token authentication (Claude Code style)
+  return {
+    ...baseHeaders,
+    'Authorization': `Bearer ${token}`,
+    'anthropic-beta': 'claude-code-20250219,oauth-2025-04-20',
+    'anthropic-dangerous-direct-browser-access': 'true',
+    'user-agent': 'claude-cli/2.1.2 (seo-agent)',
+    'x-app': 'cli',
+  }
 }
 
 /**
  * AI Client implementing the IAIClient interface.
  * Uses direct HTTP calls to the Anthropic API with retry logic.
+ * Supports both API key and OAuth token authentication.
  */
 export class AIClient implements IAIClient {
-  private readonly apiKey: string
+  private readonly token: string
+  private readonly authType: AuthType
   private readonly model: string
   private readonly defaultMaxTokens: number
 
   /**
    * Creates a new AIClient instance.
    * @param config - Optional configuration overrides
-   * @throws Error if ANTHROPIC_API_KEY is not set
+   * @throws Error if no valid credentials are found
    */
   constructor(config?: AIClientConfig) {
-    this.apiKey = config?.apiKey || process.env['ANTHROPIC_API_KEY'] || ''
-    if (!this.apiKey) {
-      throw new Error('ANTHROPIC_API_KEY is required')
-    }
+    const credentials = resolveCredentials(config)
+    this.token = credentials.token
+    this.authType = credentials.authType
     this.model = config?.model || process.env['AI_MODEL'] || 'claude-sonnet-4-20250514'
     this.defaultMaxTokens = config?.maxTokens || 8192
+
+    console.log(`  AI Client initialized with ${this.authType === 'oauth_token' ? 'OAuth token' : 'API key'}`)
+  }
+
+  /**
+   * Get the current authentication type being used.
+   */
+  getAuthType(): AuthType {
+    return this.authType
   }
 
   /**
@@ -94,17 +165,20 @@ export class AIClient implements IAIClient {
     options?: ChatOptions
   ): Promise<string> {
     return this.executeWithRetry(async () => {
+      const headers = buildHeaders(this.token, this.authType)
+
+      // For OAuth, we need to format system as array with type
+      const systemContent = this.authType === 'oauth_token'
+        ? [{ type: 'text', text: systemPrompt }]
+        : systemPrompt
+
       const response = await fetch(API_URL, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': this.apiKey,
-          'anthropic-version': '2023-06-01',
-        },
+        headers,
         body: JSON.stringify({
           model: this.model,
           max_tokens: options?.maxTokens || this.defaultMaxTokens,
-          system: systemPrompt,
+          system: systemContent,
           messages,
           temperature: options?.temperature ?? 0.7,
         }),
