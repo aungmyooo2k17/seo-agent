@@ -20,13 +20,23 @@ const MODEL_MAP: Record<string, string> = {
 let replicateClient: Replicate | null = null
 
 /**
+ * Check if Replicate API is configured
+ */
+export function isReplicateConfigured(): boolean {
+  return !!process.env['REPLICATE_API_TOKEN']
+}
+
+/**
  * Get or create the Replicate client instance
  */
 function getClient(): Replicate {
   if (!replicateClient) {
     const token = process.env['REPLICATE_API_TOKEN']
     if (!token) {
-      throw new Error('REPLICATE_API_TOKEN environment variable is required')
+      throw new Error(
+        'REPLICATE_API_TOKEN environment variable is required for image generation. ' +
+        'Set IMAGE_GENERATION_ENABLED=false to disable image generation.'
+      )
     }
     replicateClient = new Replicate({ auth: token })
   }

@@ -51,8 +51,8 @@ An **autonomous SEO optimization agent** that:
 │  │    1. Clone/pull from GitHub                              │  │
 │  │    2. Scan codebase → build profile                       │  │
 │  │    3. Analyze → find SEO issues                           │  │
-│  │    4. Fix issues → modify files                           │  │
-│  │    5. Generate content → create blog posts                │  │
+│  │    4. ★ STRATEGIC PLANNING ★ → AI thinks about what to do │  │
+│  │    5. Execute plan → prioritized fixes + content          │  │
 │  │    6. Generate images → featured images                   │  │
 │  │    7. Commit & push → direct to main                      │  │
 │  │    8. Fetch analytics → store metrics                     │  │
@@ -65,16 +65,32 @@ An **autonomous SEO optimization agent** that:
 │  ┌────────┐            ┌──────────┐            ┌────────┐      │
 │  │   AI   │            │  GitHub  │            │ Google │      │
 │  │ Client │            │  Client  │            │  APIs  │      │
-│  └────────┘            └──────────┘            └────────┘      │
-│      │                       │                       │          │
-│      ▼                       ▼                       ▼          │
-│  ┌────────┐            ┌──────────┐            ┌────────┐      │
-│  │Anthropic│           │  GitHub  │            │ Search │      │
-│  │  API   │            │   API    │            │Console │      │
-│  └────────┘            └──────────┘            └────────┘      │
+│  │   +    │            └──────────┘            └────────┘      │
+│  │Strategist│                │                       │          │
+│  └────────┘                  ▼                       ▼          │
+│      │                 ┌──────────┐            ┌────────┐      │
+│      ▼                 │  GitHub  │            │ Search │      │
+│  ┌────────┐            │   API    │            │Console │      │
+│  │Anthropic│           └──────────┘            └────────┘      │
+│  │  API   │                                                     │
+│  └────────┘                                                     │
 │                                                                  │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+**Key Insight: The Strategic Planning Phase**
+
+Instead of mechanically fixing the "top 10" issues, the SEO Strategist:
+1. Analyzes the full context (profile, issues, metrics history, past change impacts)
+2. **Thinks strategically** about what will have the most impact
+3. Creates a prioritized action plan with reasoning
+4. Explicitly skips low-value actions with explanation
+
+This prevents:
+- Changing too many things at once (hard to measure impact)
+- Fixing low-priority issues while ignoring high-impact opportunities
+- Making changes without understanding the site's current performance
+- Generating content when technical SEO needs fixing first
 
 ---
 
@@ -102,10 +118,11 @@ An **autonomous SEO optimization agent** that:
 │   │   ├── client.ts
 │   │   └── schema.sql
 │   │
-│   ├── ai/                   # AI Client (AI Engineer)
+│   ├── ai/                   # AI Client + Strategist (AI Engineer)
 │   │   ├── index.ts
 │   │   ├── client.ts
-│   │   └── prompts.ts
+│   │   ├── prompts.ts
+│   │   └── strategist.ts     # Strategic planning AI
 │   │
 │   ├── scanner/              # Codebase Scanner (SEO Engineer)
 │   │   ├── index.ts

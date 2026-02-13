@@ -17,7 +17,7 @@ import { generateWithReplicate } from './replicate'
 import { optimizeImage, BLOG_IMAGE_DEFAULTS } from './optimizer'
 
 // Re-export utilities for direct access
-export { generateWithReplicate, isValidModel, getAvailableModels } from './replicate'
+export { generateWithReplicate, isValidModel, getAvailableModels, isReplicateConfigured } from './replicate'
 export {
   optimizeImage,
   addTextOverlay,
@@ -40,6 +40,7 @@ export type { OptimizeOptions } from './optimizer'
  */
 export class ImageService implements IImageService {
   private ai: IAIClient
+  private enabled: boolean
   private provider: string
   private model: string
   private maxPerDay: number
@@ -55,6 +56,22 @@ export class ImageService implements IImageService {
     this.provider = process.env['IMAGE_PROVIDER'] || 'replicate'
     this.model = process.env['IMAGE_MODEL'] || 'flux-schnell'
     this.maxPerDay = parseInt(process.env['MAX_IMAGES_PER_DAY'] || '5', 10)
+
+    // Image generation is enabled only if explicitly enabled OR if API token is available
+    const explicitEnabled = process.env['IMAGE_GENERATION_ENABLED']
+    if (explicitEnabled !== undefined) {
+      this.enabled = explicitEnabled === 'true' || explicitEnabled === '1'
+    } else {
+      // Auto-detect: enabled if the required token is present
+      this.enabled = !!process.env['REPLICATE_API_TOKEN']
+    }
+  }
+
+  /**
+   * Check if image generation is enabled
+   */
+  isEnabled(): boolean {
+    return this.enabled
   }
 
   /**
@@ -78,9 +95,12 @@ export class ImageService implements IImageService {
    * Check if more images can be generated today for a repository
    *
    * @param repoId - Repository identifier
-   * @returns true if under the daily limit
+   * @returns true if enabled and under the daily limit
    */
   async canGenerate(repoId: string): Promise<boolean> {
+    if (!this.enabled) {
+      return false
+    }
     const key = this.getDailyKey(repoId)
     const count = this.dailyCounts.get(key) || 0
     return count < this.maxPerDay

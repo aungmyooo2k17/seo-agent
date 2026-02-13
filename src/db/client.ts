@@ -550,6 +550,110 @@ export class DatabaseClient implements IDatabase {
     return row ? parseDate(row.published_at) : null;
   }
 
+  async getContentCount(repoId: string): Promise<number> {
+    const row = this.db.prepare(`
+      SELECT COUNT(*) as count FROM content
+      WHERE repo_id = ? AND status = 'published'
+    `).get(repoId) as { count: number };
+
+    return row.count;
+  }
+
+  // ============================================
+  // Strategic Planning Support Methods
+  // ============================================
+
+  /**
+   * Get recent metrics for strategic analysis
+   * @param repoId - Repository ID
+   * @param days - Number of days to look back
+   */
+  async getRecentMetrics(repoId: string, days: number): Promise<DailyMetrics[]> {
+    const endDate = new Date();
+    const startDate = new Date(endDate.getTime() - days * 24 * 60 * 60 * 1000);
+
+    const rows = this.db.prepare(`
+      SELECT * FROM daily_metrics
+      WHERE repo_id = ? AND date >= ? AND date <= ?
+      ORDER BY date DESC
+    `).all(repoId, formatDate(startDate), formatDate(endDate)) as Array<{
+      repo_id: string;
+      date: string;
+      clicks: number;
+      impressions: number;
+      ctr: number;
+      position: number;
+      clicks_change: number;
+      impressions_change: number;
+      ctr_change: number;
+      position_change: number;
+      pages_json: string;
+      queries_json: string;
+    }>;
+
+    return rows.map(row => ({
+      repoId: row.repo_id,
+      date: parseDate(row.date),
+      clicks: row.clicks,
+      impressions: row.impressions,
+      ctr: row.ctr,
+      position: row.position,
+      clicksChange: row.clicks_change,
+      impressionsChange: row.impressions_change,
+      ctrChange: row.ctr_change,
+      positionChange: row.position_change,
+      pages: JSON.parse(row.pages_json) as PageMetrics[],
+      queries: JSON.parse(row.queries_json) as QueryMetrics[],
+    }));
+  }
+
+  /**
+   * Get recent changes for strategic analysis
+   * @param repoId - Repository ID
+   * @param days - Number of days to look back
+   */
+  async getRecentChanges(repoId: string, days: number): Promise<Change[]> {
+    const endDate = new Date();
+    const startDate = new Date(endDate.getTime() - days * 24 * 60 * 60 * 1000);
+
+    const rows = this.db.prepare(`
+      SELECT * FROM changes
+      WHERE repo_id = ? AND timestamp >= ? AND timestamp <= ?
+      ORDER BY timestamp DESC
+    `).all(repoId, formatDateTime(startDate), formatDateTime(endDate)) as Array<{
+      id: string;
+      repo_id: string;
+      timestamp: string;
+      type: string;
+      file: string;
+      description: string;
+      commit_sha: string;
+      affected_pages_json: string;
+      expected_impact: string;
+      measured_impact_json: string | null;
+    }>;
+
+    return rows.map(row => {
+      const change: Change = {
+        id: row.id,
+        repoId: row.repo_id,
+        timestamp: parseDate(row.timestamp),
+        type: row.type as Change['type'],
+        file: row.file,
+        description: row.description,
+        commitSha: row.commit_sha,
+        affectedPages: JSON.parse(row.affected_pages_json),
+        expectedImpact: row.expected_impact,
+      };
+
+      if (row.measured_impact_json !== null) {
+        change.measuredImpact = JSON.parse(row.measured_impact_json) as MeasuredImpact;
+      }
+
+      return change;
+    });
+  }
+
   // ============================================
   // SEO Issues Methods
   // ============================================

@@ -3,8 +3,9 @@
  *
  * Coordinates the entire SEO automation workflow:
  * 1. Loads configuration and initializes services
- * 2. Processes each repository (analyze, fix, generate content)
- * 3. Generates and sends daily/weekly reports
+ * 2. Runs SEO Agency (research + strategic planning)
+ * 3. Executes the strategic plan (fixes + content)
+ * 4. Generates and sends daily/weekly reports
  *
  * Designed for autonomous operation with robust error isolation.
  */
@@ -13,8 +14,9 @@
 import { loadConfig } from './config';
 import { DatabaseClient } from './db';
 
-// AI
+// AI & Agency
 import { AIClient } from './ai';
+import { SEOAgency, type AgencyPlan, type AgencyAction } from './agency';
 
 // GitHub
 import { GitHubClient } from './github';
@@ -46,6 +48,36 @@ import type {
 } from './types';
 
 // =============================================================================
+// Configuration
+// =============================================================================
+
+/**
+ * Agency configuration from environment variables
+ */
+interface AgencySettings {
+  /** Enable full agency mode with research (default: true) */
+  enabled: boolean;
+  /** Enable keyword research (default: true) */
+  enableKeywordResearch: boolean;
+  /** Enable competitor analysis (default: true) */
+  enableCompetitorAnalysis: boolean;
+  /** Use quick mode without research for faster execution */
+  quickMode: boolean;
+}
+
+/**
+ * Load agency settings from environment
+ */
+function loadAgencySettings(): AgencySettings {
+  return {
+    enabled: process.env['AGENCY_ENABLED'] !== 'false',
+    enableKeywordResearch: process.env['AGENCY_KEYWORD_RESEARCH'] !== 'false',
+    enableCompetitorAnalysis: process.env['AGENCY_COMPETITOR_ANALYSIS'] !== 'false',
+    quickMode: process.env['AGENCY_QUICK_MODE'] === 'true',
+  };
+}
+
+// =============================================================================
 // Service Container
 // =============================================================================
 
@@ -55,8 +87,10 @@ import type {
  */
 interface Services {
   config: Config;
+  agencySettings: AgencySettings;
   db: DatabaseClient;
   ai: AIClient;
+  agency: SEOAgency;
   github: GitHubClient;
   searchConsole: SearchConsoleClient;
   imageService: ImageService;
@@ -74,8 +108,8 @@ interface Services {
  * Steps:
  * 1. Clone/pull repository
  * 2. Analyze codebase (detect framework, profile, find SEO issues)
- * 3. Auto-fix eligible issues
- * 4. Generate content if due
+ * 3. Run SEO Agency (research + strategic planning)
+ * 4. Execute the strategic plan (prioritized fixes + content)
  * 5. Commit and push changes
  * 6. Fetch analytics
  *
@@ -83,7 +117,7 @@ interface Services {
  * @param services - Initialized service container
  */
 async function processRepository(repo: RepoConfig, services: Services): Promise<void> {
-  const { db, ai, github, searchConsole, contentGenerator, changeTracker } = services;
+  const { db, ai, agency, agencySettings, github, searchConsole, contentGenerator, changeTracker } = services;
 
   // Step 0: Ensure repo exists in database (for foreign key constraints)
   await db.saveRepo(repo);
@@ -133,91 +167,102 @@ async function processRepository(repo: RepoConfig, services: Services): Promise<
   const warningCount = issues.filter((i) => i.severity === 'warning').length;
   console.log(`  [analyze] Found ${issues.length} issues (${criticalCount} critical, ${warningCount} warnings)`);
 
-  // Step 4: Fix auto-fixable issues (limit to 10 per run to avoid large commits)
-  const fixableIssues = issues.filter((i) => i.autoFixable).slice(0, 10);
-  const fixes: CodeFix[] = [];
+  // Step 4: SEO AGENCY - Research + Strategic Planning
+  console.log(`  [agency] Running SEO Agency...`);
 
-  if (fixableIssues.length > 0) {
-    console.log(`  [fix] Fixing ${fixableIssues.length} auto-fixable issues...`);
+  // Gather context for the agency
+  const recentMetrics = await db.getRecentMetrics(repo.id, 30);
+  const pastChanges = await db.getRecentChanges(repo.id, 30);
+  const lastPublished = await db.getLastPublishedDate(repo.id);
+  const existingContentCount = await db.getContentCount(repo.id);
 
-    for (const issue of fixableIssues) {
-      try {
-        const fileContent = issue.file ? await github.readFile(repoPath, issue.file) : '';
-        const fix = await ai.generateFix(issue, profile, fileContent);
-        fixes.push(fix);
-      } catch (error) {
-        const errMessage = error instanceof Error ? error.message : String(error);
-        console.warn(`    [fix] Could not fix ${issue.id}: ${errMessage}`);
-      }
-    }
+  const agencyInput = {
+    profile,
+    issues,
+    recentMetrics,
+    pastChanges,
+    settings: repo.settings,
+    daysSinceLastContent: lastPublished
+      ? Math.floor((Date.now() - lastPublished.getTime()) / (1000 * 60 * 60 * 24))
+      : null,
+    existingContentCount,
+  };
 
-    if (fixes.length > 0) {
-      await github.applyChanges(repoPath, fixes);
-      console.log(`  [fix] Applied ${fixes.length} fixes`);
+  // Run agency (full or quick mode)
+  let plan: AgencyPlan;
+  if (agencySettings.quickMode) {
+    plan = await agency.createQuickPlan(agencyInput);
+  } else {
+    plan = await agency.createStrategicPlan(agencyInput);
+  }
+
+  // Log the strategic plan
+  console.log(`  [agency] ═══════════════════════════════════════════`);
+  console.log(`  [agency] STRATEGIC PLAN`);
+  console.log(`  [agency] ═══════════════════════════════════════════`);
+  console.log(`  [agency] Assessment: ${plan.overallAssessment}`);
+  console.log(`  [agency] Maturity: ${plan.maturityLevel}`);
+  console.log(`  [agency] Focus: ${plan.focusArea}`);
+  console.log(`  [agency] Confidence: ${plan.confidence}`);
+  console.log(`  [agency] Actions: ${plan.actions.length}`);
+
+  if (plan.keyInsights.length > 0) {
+    console.log(`  [agency] Key Insights:`);
+    for (const insight of plan.keyInsights.slice(0, 3)) {
+      console.log(`    • ${insight}`);
     }
   }
 
-  // Step 5: Generate content if due
+  if (plan.shortTermGoals.length > 0) {
+    console.log(`  [agency] 30-Day Goals:`);
+    for (const goal of plan.shortTermGoals.slice(0, 3)) {
+      console.log(`    → ${goal}`);
+    }
+  }
+  console.log(`  [agency] ═══════════════════════════════════════════`);
+
+  // Step 5: Execute the strategic plan
+  const fixes: CodeFix[] = [];
   const changes: Change[] = [];
-  const lastPublished = await db.getLastPublishedDate(repo.id);
 
-  if (contentGenerator.shouldGenerateContent(repo, lastPublished)) {
-    console.log(`  [content] Generating new content...`);
+  // Process planned actions in priority order
+  const sortedActions = [...plan.actions].sort((a, b) => a.priority - b.priority);
 
-    try {
-      // Use DefaultFrameworkHandler for content generation
-      // This adapts the framework-specific handler to the content generator's interface
-      const contentHandler = createContentHandler(profile);
-      const topic = repo.settings.topics[0] ?? 'general';
+  for (const action of sortedActions) {
+    await executeAction(action, {
+      profile,
+      issues,
+      repoPath,
+      repoId: repo.id,
+      settings: repo.settings,
+      ai,
+      github,
+      contentGenerator,
+      db,
+      fixes,
+      changes,
+    });
+  }
 
-      // Generate blog post with featured image
-      const { post, imageBuffer, imagePath } = await contentGenerator.generatePost(
-        topic,
-        topic,
-        profile,
-        repo.settings,
-        contentHandler
-      );
-
-      // Save image file if generated
-      if (imageBuffer.length > 0 && imagePath) {
-        await github.writeFile(repoPath, imagePath, imageBuffer);
-        console.log(`  [content] Generated image: ${imagePath}`);
-      }
-
-      // Save blog post
-      const formattedPost = contentGenerator.formatForFramework(post, contentHandler);
-      await github.writeFile(repoPath, post.filePath, formattedPost);
-      await db.saveContent(repo.id, post);
-      console.log(`  [content] Published: ${post.title}`);
-
-      changes.push({
-        id: `${repo.id}-${Date.now()}-blog`,
-        repoId: repo.id,
-        timestamp: new Date(),
-        type: 'blog-published',
-        file: post.filePath,
-        description: `Published: ${post.title}`,
-        commitSha: '',
-        affectedPages: [post.filePath],
-        expectedImpact: 'New content indexed within 1-2 weeks',
-      });
-    } catch (error) {
-      const errMessage = error instanceof Error ? error.message : String(error);
-      console.warn(`  [content] Content generation failed: ${errMessage}`);
+  // Log deferred actions (for transparency)
+  if (plan.deferredActions.length > 0) {
+    console.log(`  [agency] Deferred ${plan.deferredActions.length} actions:`);
+    for (const deferred of plan.deferredActions.slice(0, 3)) {
+      console.log(`    ⏸ ${deferred.description}: ${deferred.reason}`);
     }
-  } else {
-    const daysUntil = contentGenerator.getDaysUntilNextContent(repo, lastPublished);
-    if (daysUntil > 0) {
-      console.log(`  [content] Next content due in ${daysUntil} day(s)`);
-    }
+  }
+
+  // Apply all fixes
+  if (fixes.length > 0) {
+    await github.applyChanges(repoPath, fixes);
+    console.log(`  [fix] Applied ${fixes.length} fixes`);
   }
 
   // Step 6: Commit and push changes
   const totalChanges = fixes.length + changes.length;
   if (totalChanges > 0) {
     console.log(`  [git] Committing ${totalChanges} changes...`);
-    const commitMessage = generateCommitMessage(fixes, changes);
+    const commitMessage = generateCommitMessage(fixes, changes, plan);
     const commitSha = await github.commitAndPush(repoPath, commitMessage, repo.branch);
 
     if (commitSha) {
@@ -266,8 +311,123 @@ async function processRepository(repo: RepoConfig, services: Services): Promise<
   // Step 8: Measure impact of past changes (if enough time has passed)
   try {
     await changeTracker.measurePendingImpacts(repo.id);
-  } catch (error) {
+  } catch {
     // Non-critical, don't warn loudly
+  }
+}
+
+// =============================================================================
+// Action Execution
+// =============================================================================
+
+/**
+ * Context for action execution
+ */
+interface ActionContext {
+  profile: CodebaseProfile;
+  issues: import('./types').SEOIssue[];
+  repoPath: string;
+  repoId: string;
+  settings: import('./types').RepoSettings;
+  ai: AIClient;
+  github: GitHubClient;
+  contentGenerator: ContentGenerator;
+  db: DatabaseClient;
+  fixes: CodeFix[];
+  changes: Change[];
+}
+
+/**
+ * Execute a single action from the strategic plan
+ */
+async function executeAction(action: AgencyAction, ctx: ActionContext): Promise<void> {
+  const { profile, issues, repoPath, repoId, settings, ai, github, contentGenerator, db, fixes, changes } = ctx;
+
+  switch (action.type) {
+    case 'fix-issue': {
+      if (!action.issueId) break;
+
+      const issue = issues.find((i) => i.id === action.issueId);
+      if (!issue || !issue.autoFixable) {
+        console.log(`  [fix] Skipping ${action.issueId}: not auto-fixable`);
+        break;
+      }
+
+      try {
+        console.log(`  [fix] Fixing: ${issue.type}`);
+        console.log(`    Reason: ${action.reasoning}`);
+        const fileContent = issue.file ? await github.readFile(repoPath, issue.file) : '';
+        const fix = await ai.generateFix(issue, profile, fileContent);
+        fixes.push(fix);
+      } catch (error) {
+        const errMessage = error instanceof Error ? error.message : String(error);
+        console.warn(`  [fix] Failed to fix ${issue.id}: ${errMessage}`);
+      }
+      break;
+    }
+
+    case 'create-content': {
+      if (!action.content) break;
+
+      console.log(`  [content] Creating: ${action.content.topic}`);
+      console.log(`    Keyword: ${action.content.keyword}`);
+      console.log(`    Reason: ${action.reasoning}`);
+
+      try {
+        const contentHandler = createContentHandler(profile);
+
+        const { post, imageBuffer, imagePath } = await contentGenerator.generatePost(
+          action.content.topic,
+          action.content.keyword,
+          profile,
+          settings,
+          contentHandler
+        );
+
+        if (imageBuffer.length > 0 && imagePath) {
+          await github.writeFile(repoPath, imagePath, imageBuffer);
+          console.log(`  [content] Generated image: ${imagePath}`);
+        }
+
+        const formattedPost = contentGenerator.formatForFramework(post, contentHandler);
+        await github.writeFile(repoPath, post.filePath, formattedPost);
+        await db.saveContent(repoId, post);
+        console.log(`  [content] Published: ${post.title}`);
+
+        changes.push({
+          id: `${repoId}-${Date.now()}-blog`,
+          repoId,
+          timestamp: new Date(),
+          type: 'blog-published',
+          file: post.filePath,
+          description: `Published: ${post.title}`,
+          commitSha: '',
+          affectedPages: [post.filePath],
+          expectedImpact: action.expectedImpact,
+        });
+      } catch (error) {
+        const errMessage = error instanceof Error ? error.message : String(error);
+        console.warn(`  [content] Failed to create content: ${errMessage}`);
+      }
+      break;
+    }
+
+    case 'optimize-links': {
+      console.log(`  [links] Link optimization: ${action.reasoning}`);
+      // Future: implement internal linking optimization
+      break;
+    }
+
+    case 'investigate': {
+      console.log(`  [investigate] ${action.reasoning}`);
+      // Log for manual review - no automated action
+      break;
+    }
+
+    case 'defer': {
+      // Silently skip deferred actions (logged separately)
+      break;
+    }
   }
 }
 
@@ -277,7 +437,6 @@ async function processRepository(repo: RepoConfig, services: Services): Promise<
 
 /**
  * Content handler interface for the ContentGenerator
- * Matches the IFrameworkHandler expected by optimizer/content.ts
  */
 interface ContentFrameworkHandler {
   readonly framework: string;
@@ -290,14 +449,10 @@ interface ContentFrameworkHandler {
 
 /**
  * Create a content handler for the given codebase profile
- *
- * Adapts the scanner's IFrameworkHandler to the content generator's interface.
  */
 function createContentHandler(profile: CodebaseProfile): ContentFrameworkHandler {
-  // Get the framework-specific handler from scanner
   const scannerHandler = getHandler(profile.framework);
 
-  // Determine content extension based on framework
   const getExtension = (): 'mdx' | 'md' | 'html' => {
     if (
       profile.framework === 'nextjs-app' ||
@@ -309,7 +464,6 @@ function createContentHandler(profile: CodebaseProfile): ContentFrameworkHandler
     return 'md';
   };
 
-  // Create handler with framework-specific behavior
   return {
     framework: profile.framework,
 
@@ -368,9 +522,9 @@ function createContentHandler(profile: CodebaseProfile): ContentFrameworkHandler
 }
 
 /**
- * Generate a descriptive commit message from fixes and changes
+ * Generate a descriptive commit message from fixes, changes, and plan
  */
-function generateCommitMessage(fixes: CodeFix[], changes: Change[]): string {
+function generateCommitMessage(fixes: CodeFix[], changes: Change[], plan: AgencyPlan): string {
   const parts: string[] = [];
 
   if (fixes.length > 0) {
@@ -391,12 +545,16 @@ function generateCommitMessage(fixes: CodeFix[], changes: Change[]): string {
 
   return `SEO Agent: ${summary}
 
-Automatically generated by SEO Agent.
+Focus: ${plan.focusArea}
+Maturity: ${plan.maturityLevel}
+Confidence: ${plan.confidence}
+
+Automatically generated by SEO Agency.
 https://github.com/your-org/seo-agent`;
 }
 
 /**
- * Infer the change type from a code fix based on its description
+ * Infer the change type from a code fix
  */
 function inferChangeType(fix: CodeFix): ChangeType {
   const desc = fix.description.toLowerCase();
@@ -415,7 +573,7 @@ function inferChangeType(fix: CodeFix): ChangeType {
 }
 
 /**
- * Get the database path from environment or default
+ * Get the database path from environment
  */
 function getDatabasePath(): string {
   const dataDir = process.env['DATA_DIR'] ?? './data';
@@ -435,13 +593,16 @@ function getDatabasePath(): string {
 async function main(): Promise<void> {
   const startTime = Date.now();
 
-  console.log('========================================');
-  console.log('SEO Agent starting...');
-  console.log(`Time: ${new Date().toISOString()}`);
-  console.log('========================================\n');
+  console.log('╔════════════════════════════════════════════════════════════╗');
+  console.log('║                    SEO AGENCY STARTING                      ║');
+  console.log('╚════════════════════════════════════════════════════════════╝');
+  console.log(`  Time: ${new Date().toISOString()}`);
+  console.log('');
 
-  // 1. Initialize all services
+  // 1. Load configuration
   let config: Config;
+  const agencySettings = loadAgencySettings();
+
   try {
     config = loadConfig();
   } catch (error) {
@@ -450,9 +611,18 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
+  // 2. Initialize services
   const dbPath = getDatabasePath();
   const db = new DatabaseClient(dbPath);
   const ai = new AIClient();
+
+  // Initialize SEO Agency with settings
+  const agency = new SEOAgency(ai, {
+    enableKeywordResearch: agencySettings.enableKeywordResearch,
+    enableCompetitorAnalysis: agencySettings.enableCompetitorAnalysis,
+    enableContentGapAnalysis: true,
+  });
+
   const github = new GitHubClient();
   const searchConsole = new SearchConsoleClient();
   const imageService = new ImageService(ai);
@@ -464,8 +634,10 @@ async function main(): Promise<void> {
 
   const services: Services = {
     config,
+    agencySettings,
     db,
     ai,
+    agency,
     github,
     searchConsole,
     imageService,
@@ -473,44 +645,48 @@ async function main(): Promise<void> {
     changeTracker,
   };
 
-  console.log(`[config] Loaded ${config.repos.length} repository(s)\n`);
+  // Log configuration
+  console.log(`[config] Agency Mode: ${agencySettings.enabled ? 'ENABLED' : 'DISABLED'}`);
+  console.log(`[config] Keyword Research: ${agencySettings.enableKeywordResearch ? 'ON' : 'OFF'}`);
+  console.log(`[config] Competitor Analysis: ${agencySettings.enableCompetitorAnalysis ? 'ON' : 'OFF'}`);
+  console.log(`[config] Quick Mode: ${agencySettings.quickMode ? 'ON' : 'OFF'}`);
+  console.log(`[config] Repositories: ${config.repos.length}`);
+  console.log('');
 
-  // 2. Process each repository (isolated error handling)
+  // 3. Process each repository
   let successCount = 0;
   let failCount = 0;
 
   for (const repo of config.repos) {
-    console.log(`----------------------------------------`);
-    console.log(`[repo] Processing: ${repo.id} (${repo.domain})`);
-    console.log(`----------------------------------------`);
+    console.log('┌────────────────────────────────────────────────────────────┐');
+    console.log(`│ REPOSITORY: ${repo.id.padEnd(47)} │`);
+    console.log(`│ Domain: ${repo.domain.padEnd(51)} │`);
+    console.log('└────────────────────────────────────────────────────────────┘');
 
     try {
       await processRepository(repo, services);
       successCount++;
-      console.log(`[repo] ${repo.id} completed successfully\n`);
+      console.log(`[repo] ✓ ${repo.id} completed successfully\n`);
     } catch (error) {
       failCount++;
       const errMessage = error instanceof Error ? error.message : String(error);
       const errStack = error instanceof Error ? error.stack : '';
-      console.error(`[ERROR] Failed to process ${repo.id}: ${errMessage}`);
-      if (errStack) {
+      console.error(`[ERROR] ✗ Failed to process ${repo.id}: ${errMessage}`);
+      if (errStack && process.env['DEBUG']) {
         console.error(errStack);
       }
-      console.log(''); // Blank line before next repo
-      // Continue with other repos - don't let one failure stop everything
+      console.log('');
     }
   }
 
-  // 3. Generate and send reports
-  console.log(`----------------------------------------`);
-  console.log(`[reports] Generating reports...`);
-  console.log(`----------------------------------------`);
+  // 4. Generate and send reports
+  console.log('┌────────────────────────────────────────────────────────────┐');
+  console.log('│                      GENERATING REPORTS                     │');
+  console.log('└────────────────────────────────────────────────────────────┘');
 
   try {
     const report = await reportGenerator.generate(config.repos);
-    console.log(
-      `[reports] Daily report: ${report.totalClicks} clicks, ${report.totalImpressions} impressions`
-    );
+    console.log(`[reports] Daily: ${report.totalClicks} clicks, ${report.totalImpressions} impressions`);
 
     await emailSender.sendDailyReport(report);
 
@@ -518,7 +694,7 @@ async function main(): Promise<void> {
     const today = new Date();
     if (today.getDay() === 0) {
       const weeklyReport = await weeklyReportGenerator.generate(config.repos);
-      console.log(`[reports] Weekly report generated (Week ${weeklyReport.weekNumber})`);
+      console.log(`[reports] Weekly: Week ${weeklyReport.weekNumber}`);
       await emailSender.sendWeeklyReport(weeklyReport);
     }
   } catch (error) {
@@ -526,17 +702,20 @@ async function main(): Promise<void> {
     console.error(`[ERROR] Report generation failed: ${errMessage}`);
   }
 
-  // 4. Cleanup
+  // 5. Cleanup
   db.close();
 
-  // 5. Summary
+  // 6. Summary
   const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
-  console.log(`\n========================================`);
-  console.log(`SEO Agent completed`);
-  console.log(`Time: ${new Date().toISOString()}`);
-  console.log(`Duration: ${elapsed}s`);
-  console.log(`Repos: ${successCount} succeeded, ${failCount} failed`);
-  console.log(`========================================`);
+  console.log('');
+  console.log('╔════════════════════════════════════════════════════════════╗');
+  console.log('║                    SEO AGENCY COMPLETED                     ║');
+  console.log('╠════════════════════════════════════════════════════════════╣');
+  console.log(`║  Time: ${new Date().toISOString().padEnd(51)} ║`);
+  console.log(`║  Duration: ${(elapsed + 's').padEnd(48)} ║`);
+  console.log(`║  Success: ${String(successCount).padEnd(49)} ║`);
+  console.log(`║  Failed: ${String(failCount).padEnd(50)} ║`);
+  console.log('╚════════════════════════════════════════════════════════════╝');
 }
 
 // =============================================================================

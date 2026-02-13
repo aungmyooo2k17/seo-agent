@@ -21,6 +21,7 @@
     "test:integration": "jest tests/integration",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "test:agency": "ts-node scripts/test-agency.ts",
     "init-db": "ts-node scripts/init-db.ts",
     "clean": "rm -rf dist coverage",
     "prebuild": "npm run clean"

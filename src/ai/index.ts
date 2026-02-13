@@ -1,11 +1,14 @@
 /**
  * AI module for SEO automation.
  * Provides AI-powered codebase analysis, SEO issue detection,
- * code fixes, and content generation.
+ * code fixes, content generation, and strategic planning.
  */
 
 export { AIClient, createAIClient } from './client'
 export type { AIClientConfig } from './client'
+
+export { SEOStrategist, createStrategist } from './strategist'
+export type { StrategyContext, StrategicAction, StrategicPlan } from './strategist'
 
 export {
   PROMPTS,

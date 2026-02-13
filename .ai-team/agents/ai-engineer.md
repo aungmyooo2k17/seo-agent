@@ -6,6 +6,7 @@ You are the **AI Engineer** responsible for:
 - Anthropic Claude API integration
 - All AI prompts for the system
 - AI response parsing and quality
+- **Strategic planning AI** — The "thinking" layer that decides what to do
 
 Your code powers the intelligence of the entire system.
 
@@ -16,6 +17,7 @@ Your code powers the intelligence of the entire system.
 1. **AI Client** — Direct HTTP client for Anthropic API (following RoadRunner pattern)
 2. **Prompts** — All system prompts for different tasks
 3. **Parsing** — Parse AI responses into structured data
+4. **SEO Strategist** — AI that thinks before acting (creates strategic plans)
 
 ---
 
@@ -25,7 +27,8 @@ Your code powers the intelligence of the entire system.
 /src/ai/
 ├── index.ts          # Re-exports
 ├── client.ts         # Anthropic API client
-└── prompts.ts        # All system prompts
+├── prompts.ts        # All system prompts
+└── strategist.ts     # SEO Strategist - strategic planning AI
 ```
 
 ---
@@ -380,6 +383,85 @@ async generateAltText(imageContext: string, keyword?: string): Promise<string> {
 
 ---
 
+---
+
+## SEO Strategist (`/src/ai/strategist.ts`)
+
+The Strategist is the "thinking" layer that creates intelligent action plans.
+
+### Why It Exists
+
+Without the Strategist, the agent was **mechanically** fixing issues:
+- Fix top 10 auto-fixable issues
+- Generate content if schedule says so
+- No consideration of context or impact
+
+With the Strategist, the agent **thinks strategically**:
+- What's working well? What's not?
+- What will have the highest impact?
+- What should we skip and why?
+- Is it the right time to make changes?
+
+### Key Interfaces
+
+```typescript
+interface StrategyContext {
+  profile: CodebaseProfile       // Current site structure
+  issues: SEOIssue[]             // All detected issues
+  recentMetrics: DailyMetrics[]  // Last 30 days of performance
+  pastChanges: Change[]          // Previous changes + their impact
+  settings: RepoSettings         // User's goals and preferences
+  daysSinceLastContent: number   // Content scheduling
+  existingContentCount: number   // Current content volume
+}
+
+interface StrategicPlan {
+  overallAssessment: string      // "This site has good content but poor technical SEO"
+  keyInsights: string[]          // What the AI noticed
+  strengths: string[]            // What's working
+  weaknesses: string[]           // What needs work
+  actions: StrategicAction[]     // Prioritized list of 5-7 actions
+  skippedActions: [...]          // What we're NOT doing and why
+  confidence: 'high' | 'medium' | 'low'
+  strategicReasoning: string     // Overall thinking
+  focusArea: 'technical-seo' | 'content' | 'user-experience' | 'authority' | 'balanced'
+}
+
+interface StrategicAction {
+  type: 'fix-issue' | 'generate-content' | 'defer' | 'investigate' | 'skip'
+  priority: number
+  issueId?: string               // For fix-issue
+  topic?: string                 // For generate-content
+  keyword?: string
+  expectedImpact: string
+  reasoning: string              // WHY this action
+  effort: 'low' | 'medium' | 'high'
+  confidence: 'high' | 'medium' | 'low'
+}
+```
+
+### Usage
+
+```typescript
+import { SEOStrategist } from './ai'
+
+const strategist = new SEOStrategist(aiClient)
+const plan = await strategist.createPlan(context)
+
+// Execute plan actions in priority order
+for (const action of plan.actions.sort((a, b) => a.priority - b.priority)) {
+  if (action.type === 'fix-issue') {
+    // Fix the specific issue
+  } else if (action.type === 'generate-content') {
+    // Generate content with the suggested topic/keyword
+  } else if (action.type === 'investigate') {
+    // Log for manual review
+  }
+}
+```
+
+---
+
 ## Quality Checklist
 
 Before marking complete:
@@ -391,6 +473,7 @@ Before marking complete:
 - [ ] Response parsing handles edge cases
 - [ ] JSDoc comments on public APIs
 - [ ] Exports via index.ts
+- [ ] SEOStrategist creates valid, reasoned plans
 
 ---
 

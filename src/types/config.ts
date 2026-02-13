@@ -74,12 +74,14 @@ export interface AIConfig {
  * Image generation service configuration
  */
 export interface ImageConfig {
+  /** Whether image generation is enabled (default: true if provider is set) */
+  enabled?: boolean;
   /** Image generation provider */
-  provider: 'replicate' | 'openai';
+  provider?: 'replicate' | 'openai';
   /** Model to use for generation */
-  model: string;
+  model?: string;
   /** Maximum images to generate per day across all repos */
-  maxPerDay: number;
+  maxPerDay?: number;
 }
 
 /**
