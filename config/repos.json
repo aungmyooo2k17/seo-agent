@@ -1,0 +1,22 @@
+{
+  "repos": [
+    {
+      "id": "example-site",
+      "url": "git@github.com:yourusername/your-website.git",
+      "branch": "main",
+      "domain": "https://example.com",
+      "settings": {
+        "contentFrequency": "weekly",
+        "tone": "professional",
+        "topics": ["your-industry", "your-product", "tutorials"],
+        "maxBlogsPerWeek": 2,
+        "maxImagesPerDay": 3,
+        "excludePaths": ["node_modules/", ".git/", "dist/"],
+        "customInstructions": "Focus on B2B audience. Avoid overly casual language."
+      },
+      "searchConsole": {
+        "propertyUrl": "https://example.com"
+      }
+    }
+  ]
+}
