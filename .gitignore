@@ -1,0 +1,243 @@
+# =============================================================================
+# AGI-SEO-Optimizer .gitignore
+# =============================================================================
+
+# =============================================================================
+# Dependencies
+# =============================================================================
+node_modules/
+.npm
+.pnpm-store/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# =============================================================================
+# Build Output
+# =============================================================================
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# =============================================================================
+# Data & Database
+# =============================================================================
+data/
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# =============================================================================
+# SECRETS & SENSITIVE FILES - CRITICAL
+# =============================================================================
+
+# Environment files (NEVER commit these)
+.env
+.env.*
+!.env.example
+!.env.template
+
+# API Keys & Tokens
+**/api_key*
+**/apikey*
+**/api-key*
+**/*token*
+**/*secret*
+**/*password*
+**/*credential*
+!**/token.ts
+!**/tokens.ts
+
+# SSH Keys (all variants)
+*.pem
+*.key
+*.p12
+*.pfx
+*.ppk
+id_rsa
+id_rsa.*
+id_ed25519
+id_ed25519.*
+id_ecdsa
+id_ecdsa.*
+id_dsa
+id_dsa.*
+*.pub
+known_hosts
+authorized_keys
+
+# Google Service Account & OAuth
+service-account*.json
+*-service-account*.json
+client_secret*.json
+google-credentials*.json
+gcp-*.json
+firebase-*.json
+oauth*.json
+
+# AWS Credentials
+.aws/
+aws_credentials
+*.aws
+
+# Other Cloud Providers
+.azure/
+.digitalocean/
+.gcloud/
+
+# Certificates & Keys
+*.crt
+*.cer
+*.ca-bundle
+*.p7b
+*.p7c
+*.p7s
+*.keystore
+*.jks
+
+# GPG Keys
+*.gpg
+*.asc
+secring.*
+pubring.*
+
+# Config files that may contain secrets
+config/repos.json
+config/*.secret.*
+config/local.*
+config/private.*
+secrets/
+.secrets/
+private/
+.private/
+
+# =============================================================================
+# IDE & Editors
+# =============================================================================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.sublime-workspace
+*.sublime-project
+.atom/
+.history/
+
+# =============================================================================
+# OS Files
+# =============================================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# =============================================================================
+# Logs
+# =============================================================================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.npm/_logs/
+
+# =============================================================================
+# Testing & Coverage
+# =============================================================================
+coverage/
+.nyc_output/
+*.lcov
+.coverage
+htmlcov/
+junit.xml
+test-results/
+tests/tmp/
+
+# =============================================================================
+# Temporary Files
+# =============================================================================
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+*.backup
+*.orig
+*.old
+.cache/
+.temp/
+.tmp/
+
+# =============================================================================
+# Shell History (may contain secrets)
+# =============================================================================
+.bash_history
+.zsh_history
+.sh_history
+.history
+.lesshst
+.wget-hsts
+
+# =============================================================================
+# Docker
+# =============================================================================
+docker-compose.override.yml
+.docker/
+
+# =============================================================================
+# Cloned Repositories (runtime data)
+# =============================================================================
+repos/
+
+# =============================================================================
+# Reports (generated)
+# =============================================================================
+reports/
+*.report.json
+*.report.html
+
+# =============================================================================
+# Misc
+# =============================================================================
+*.pid
+*.seed
+*.pid.lock
+.node_repl_history
+
+# Backup files from editors
+*~
+\#*\#
+.#*
+
+# Core dumps
+core
+core.*
+
+# =============================================================================
+# Project-specific exclusions
+# =============================================================================
+
+# Don't commit test output
+tests/fixtures/repos/**/node_modules/
+tests/fixtures/repos/**/.git/
+
+# AI team files (development only)
+.ai-team/
+
+# Local development scripts
+scripts/local-*.sh
+scripts/*.local.sh

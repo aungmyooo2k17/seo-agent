@@ -1,0 +1,97 @@
+{
+  "repoId": "mock-repo",
+  "scannedAt": "2024-01-20T10:00:00.000Z",
+  "commitHash": "abc123def456789",
+  "framework": "nextjs-app",
+  "frameworkVersion": "14.0.0",
+  "structure": {
+    "pagesDir": "app",
+    "componentsDir": "components",
+    "publicDir": "public",
+    "contentDir": "content",
+    "layoutFiles": ["app/layout.tsx"],
+    "configFiles": ["next.config.js", "tailwind.config.js"]
+  },
+  "seoPatterns": {
+    "metaHandling": "metadata-export",
+    "existingSitemap": null,
+    "existingRobots": null,
+    "existingSchema": [],
+    "hasOgImages": false,
+    "hasFavicon": true
+  },
+  "buildSystem": {
+    "packageManager": "npm",
+    "buildCommand": "npm run build",
+    "devCommand": "npm run dev",
+    "outDir": ".next"
+  },
+  "pages": [
+    {
+      "path": "/",
+      "filePath": "app/page.tsx",
+      "title": null,
+      "description": null,
+      "hasOgImage": false,
+      "hasSchema": false,
+      "images": [],
+      "internalLinks": ["/about", "/services", "/contact"],
+      "wordCount": 150,
+      "lastModified": "2024-01-15T08:00:00.000Z"
+    },
+    {
+      "path": "/about",
+      "filePath": "app/about/page.tsx",
+      "title": "About Us",
+      "description": "Learn more about our company",
+      "hasOgImage": true,
+      "hasSchema": false,
+      "images": [
+        {
+          "src": "/images/team.jpg",
+          "alt": "Our team",
+          "isLocal": true,
+          "dimensions": { "width": 800, "height": 600 }
+        }
+      ],
+      "internalLinks": ["/", "/services"],
+      "wordCount": 450,
+      "lastModified": "2024-01-10T12:00:00.000Z"
+    },
+    {
+      "path": "/services",
+      "filePath": "app/services/page.tsx",
+      "title": "Our Services",
+      "description": null,
+      "hasOgImage": false,
+      "hasSchema": false,
+      "images": [],
+      "internalLinks": ["/", "/about", "/contact"],
+      "wordCount": 300,
+      "lastModified": "2024-01-12T09:30:00.000Z"
+    },
+    {
+      "path": "/blog",
+      "filePath": "app/blog/page.tsx",
+      "title": "Blog",
+      "description": "Latest news and articles",
+      "hasOgImage": false,
+      "hasSchema": false,
+      "images": [],
+      "internalLinks": ["/"],
+      "wordCount": 100,
+      "lastModified": "2024-01-18T14:00:00.000Z"
+    }
+  ],
+  "safeZones": [
+    "app/",
+    "public/",
+    "content/"
+  ],
+  "dangerZones": [
+    "node_modules/",
+    ".git/",
+    ".next/",
+    "dist/"
+  ]
+}

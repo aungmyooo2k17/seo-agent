@@ -1,0 +1,35 @@
+{
+  "repos": [
+    {
+      "id": "my-website",
+      "url": "git@github.com:your-username/your-repo.git",
+      "branch": "main",
+      "domain": "https://your-domain.com",
+      "settings": {
+        "contentFrequency": "weekly",
+        "tone": "professional",
+        "topics": ["web development", "tutorials", "best practices"],
+        "maxBlogsPerWeek": 2,
+        "maxImagesPerDay": 5,
+        "excludePaths": ["/admin", "/api", "/private"]
+      },
+      "searchConsole": {
+        "propertyUrl": "https://your-domain.com"
+      }
+    },
+    {
+      "id": "another-site",
+      "url": "git@github.com:your-username/another-repo.git",
+      "branch": "main",
+      "domain": "https://another-domain.com",
+      "settings": {
+        "contentFrequency": "monthly",
+        "tone": "casual",
+        "topics": ["lifestyle", "tips"],
+        "maxBlogsPerWeek": 1,
+        "maxImagesPerDay": 3,
+        "excludePaths": []
+      }
+    }
+  ]
+}

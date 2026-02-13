@@ -1,0 +1,112 @@
+{
+  "issues": [
+    {
+      "id": "missing-meta-title:/",
+      "type": "missing-meta-title",
+      "severity": "critical",
+      "page": "/",
+      "file": "app/page.tsx",
+      "description": "The homepage is missing a title tag. This is critical for SEO as the title appears in search results.",
+      "recommendation": "Add a metadata export with a descriptive title (50-60 characters) that includes your primary keyword.",
+      "autoFixable": true
+    },
+    {
+      "id": "missing-meta-description:/",
+      "type": "missing-meta-description",
+      "severity": "critical",
+      "page": "/",
+      "file": "app/page.tsx",
+      "description": "The homepage is missing a meta description. This text appears in search result snippets.",
+      "recommendation": "Add a compelling meta description (150-155 characters) that summarizes the page content and includes a call to action.",
+      "autoFixable": true
+    },
+    {
+      "id": "missing-meta-description:/services",
+      "type": "missing-meta-description",
+      "severity": "critical",
+      "page": "/services",
+      "file": "app/services/page.tsx",
+      "description": "The services page is missing a meta description.",
+      "recommendation": "Add a meta description that highlights your main service offerings.",
+      "autoFixable": true
+    },
+    {
+      "id": "missing-sitemap:global",
+      "type": "missing-sitemap",
+      "severity": "critical",
+      "page": null,
+      "file": null,
+      "description": "No sitemap.xml found in the project. A sitemap helps search engines discover and index your pages.",
+      "recommendation": "Generate and add a sitemap.xml file to your public directory. Include all important pages with appropriate priority and change frequency.",
+      "autoFixable": true
+    },
+    {
+      "id": "missing-robots:global",
+      "type": "missing-robots",
+      "severity": "warning",
+      "page": null,
+      "file": null,
+      "description": "No robots.txt found. This file controls how search engines crawl your site.",
+      "recommendation": "Add a robots.txt file that allows crawling of public pages and links to your sitemap.",
+      "autoFixable": true
+    },
+    {
+      "id": "missing-og-image:/",
+      "type": "missing-og-image",
+      "severity": "warning",
+      "page": "/",
+      "file": "app/page.tsx",
+      "description": "The homepage has no Open Graph image configured. OG images appear when the page is shared on social media.",
+      "recommendation": "Add an og:image meta tag with a 1200x630 pixel image for optimal social sharing appearance.",
+      "autoFixable": false
+    },
+    {
+      "id": "missing-og-image:/services",
+      "type": "missing-og-image",
+      "severity": "warning",
+      "page": "/services",
+      "file": "app/services/page.tsx",
+      "description": "The services page has no Open Graph image.",
+      "recommendation": "Create and add a custom OG image that represents your services.",
+      "autoFixable": false
+    },
+    {
+      "id": "missing-schema:global",
+      "type": "missing-schema",
+      "severity": "info",
+      "page": "/",
+      "file": "app/layout.tsx",
+      "description": "No Organization or WebSite schema markup found. Structured data helps search engines understand your content.",
+      "recommendation": "Add JSON-LD schema markup for Organization and WebSite to your root layout.",
+      "autoFixable": true
+    },
+    {
+      "id": "thin-content:/blog",
+      "type": "thin-content",
+      "severity": "warning",
+      "page": "/blog",
+      "file": "app/blog/page.tsx",
+      "description": "The blog listing page has only 100 words. Search engines may consider this thin content.",
+      "recommendation": "Add more content to the page, such as a description of your blog topics, featured posts, or category navigation.",
+      "autoFixable": false
+    },
+    {
+      "id": "orphan-page:/blog",
+      "type": "orphan-page",
+      "severity": "info",
+      "page": "/blog",
+      "file": "app/blog/page.tsx",
+      "description": "The blog page has no internal links pointing to it from other pages.",
+      "recommendation": "Add links to the blog from your homepage, navigation, or other relevant pages to improve discoverability.",
+      "autoFixable": false
+    }
+  ],
+  "summary": {
+    "total": 10,
+    "critical": 4,
+    "warning": 4,
+    "info": 2,
+    "autoFixable": 5
+  },
+  "generatedAt": "2024-01-20T10:30:00.000Z"
+}

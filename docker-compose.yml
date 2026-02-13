@@ -1,0 +1,79 @@
+version: '3.8'
+
+services:
+  seo-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: seo-agent
+
+    environment:
+      # =======================================================================
+      # AI Configuration
+      # =======================================================================
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - AI_MODEL=${AI_MODEL:-claude-sonnet-4-20250514}
+      - AI_MAX_TOKENS=${AI_MAX_TOKENS:-8192}
+
+      # =======================================================================
+      # GitHub Integration
+      # =======================================================================
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+
+      # =======================================================================
+      # Image Generation
+      # =======================================================================
+      - IMAGE_PROVIDER=${IMAGE_PROVIDER:-replicate}
+      - IMAGE_MODEL=${IMAGE_MODEL:-flux-schnell}
+      - REPLICATE_API_TOKEN=${REPLICATE_API_TOKEN}
+      - MAX_IMAGES_PER_DAY=${MAX_IMAGES_PER_DAY:-5}
+
+      # =======================================================================
+      # Google Search Console
+      # =======================================================================
+      - GOOGLE_SERVICE_ACCOUNT_KEY=${GOOGLE_SERVICE_ACCOUNT_KEY}
+
+      # =======================================================================
+      # Email Reports
+      # =======================================================================
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - EMAIL_FROM=${EMAIL_FROM:-SEO Agent <seo@example.com>}
+      - REPORT_EMAIL=${REPORT_EMAIL}
+
+      # =======================================================================
+      # Paths
+      # =======================================================================
+      - DATA_DIR=/data
+      - CONFIG_PATH=/app/config/repos.json
+
+    volumes:
+      # Persistent data volume for database and reports
+      - seo-data:/data
+      # Read-only config mount
+      - ./config:/app/config:ro
+      # SSH keys for GitHub authentication (read-only)
+      - ${SSH_KEY_PATH:-~/.ssh}:/home/seoagent/.ssh:ro
+
+    # Resource constraints
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    # Don't auto-restart (designed for cron/scheduled runs)
+    restart: "no"
+
+volumes:
+  seo-data:
+    driver: local
